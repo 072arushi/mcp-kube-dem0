@@ -1,1 +1,1 @@
-# mcp-kube-dem0
+# mcp-kube-demo
