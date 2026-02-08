@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agent-code
+data:
+  agent.py: |
+    import requests
+
+    MCP_URL = "http://mcp-server:8080"
+
+    print("🔍 Discovering tools via MCP...")
+    tools = requests.get(f"{MCP_URL}/tools").json()
+
+    for tool in tools:
+      print(f"- {tool['name']}: {tool['description']}")
+
+    tool_names = [t["name"] for t in tools]
+    tool_to_call = "get_cluster_name" if "get_cluster_name" in tool_names else tool_names[0]
+
+    print(f"Calling tool: {tool_to_call}")
+    result = requests.post(f"{MCP_URL}/tools/{tool_to_call}").json()
+
+    print("✅ Tool result:", result)
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: agent
+spec:
+  restartPolicy: Never
+  containers:
+    - name: agent
+      image: python:3.11-slim
+      command: ["sh", "-c", "pip install --no-cache-dir requests && python -u /app/agent.py"]
+      volumeMounts:
+        - name: agent-code
+          mountPath: /app/agent.py
+          subPath: agent.py
+  volumes:
+    - name: agent-code
+      configMap:
+        name: agent-code
